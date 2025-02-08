@@ -1,0 +1,29 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "s2s_pipeline",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/s2s_pipeline.py",
+            "args": [
+                "--stt_model_name",
+                "openai/whisper-large-v3",
+                "--llm",
+                "open_api",
+                "--open_api_stream",
+                "True",
+                "--open_api_model_name",
+                "gpt-4o",
+                "--tts",
+                "coqui",
+                //"--language",
+                //"en"
+            ],
+            "console": "integratedTerminal"
+        }
+    ]
+}

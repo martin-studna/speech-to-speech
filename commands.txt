@@ -1,0 +1,5 @@
+python s2s_pipeline.py \
+  --stt_model_name openai/whisper-large-v3 \
+  --llm open_api \
+  --open_api_stream True \
+  --open_api_model_name gpt-4o

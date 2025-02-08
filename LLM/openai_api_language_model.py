@@ -19,6 +19,7 @@ WHISPER_LANGUAGE_TO_LLM_LANGUAGE = {
     "zh": "chinese",
     "ja": "japanese",
     "ko": "korean",
+    "cs": "czech",
 }
 
 class OpenApiModelHandler(BaseHandler):
