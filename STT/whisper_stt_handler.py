@@ -21,6 +21,11 @@ SUPPORTED_LANGUAGES = [
     "ko",
     "hi",
     "cs"
+    "de",
+    "pt",
+    "pl",
+    "it",
+    "nl",
 ]
 
 

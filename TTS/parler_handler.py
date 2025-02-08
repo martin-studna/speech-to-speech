@@ -31,22 +31,34 @@ if not is_flash_attn_2_available() and torch.cuda.is_available():
     )
 
 
+WHISPER_LANGUAGE_TO_PARLER_SPEAKER = {
+    "en": "Jason",
+    "fr": "Christine",
+    "es": "Steven",
+    "de": "Nicole",
+    "pt": "Sophia",
+    "pl": "Alex",
+    "it": "Richard",
+    "nl": "Mark",
+}
+
+
 class ParlerTTSHandler(BaseHandler):
     def setup(
         self,
         should_listen,
-        model_name="ylacombe/parler-tts-mini-jenny-30H",
+        model_name="parler-tts/parler-mini-v1-jenny",
         device="cuda",
         torch_dtype="float16",
         compile_mode=None,
         gen_kwargs={},
         max_prompt_pad_length=8,
         description=(
-            "A female speaker with a slightly low-pitched voice delivers her words quite expressively, in a very confined sounding environment with clear audio quality. "
-            "She speaks very fast."
+            "Jenny speaks at a slightly slow pace with an animated delivery with clear audio quality."
         ),
         play_steps_s=1,
         blocksize=512,
+        use_default_speakers_list=True,
     ):
         self.should_listen = should_listen
         self.device = device
@@ -54,13 +66,20 @@ class ParlerTTSHandler(BaseHandler):
         self.gen_kwargs = gen_kwargs
         self.compile_mode = compile_mode
         self.max_prompt_pad_length = max_prompt_pad_length
+        self.use_default_speakers_list = use_default_speakers_list
+        if self.use_default_speakers_list:
+            description = description.replace("Jenny", "")
+
+        self.speaker = "Jason"
         self.description = description
 
-        self.description_tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.prompt_tokenizer = AutoTokenizer.from_pretrained(model_name)
         self.model = ParlerTTSForConditionalGeneration.from_pretrained(
             model_name, torch_dtype=self.torch_dtype
         ).to(device)
+        
+        self.description_tokenizer = AutoTokenizer.from_pretrained(self.model.config.text_encoder._name_or_path)
+        self.prompt_tokenizer = AutoTokenizer.from_pretrained(model_name)
+
 
         framerate = self.model.audio_encoder.config.frame_rate
         self.play_steps = int(framerate * play_steps_s)
@@ -90,17 +109,21 @@ class ParlerTTSHandler(BaseHandler):
             {"padding": "max_length", "max_length": max_length_prompt} if pad else {}
         )
 
+        description = self.description
+        if self.use_default_speakers_list:
+            description = self.speaker + " " + self.description
+
         tokenized_description = self.description_tokenizer(
-            self.description, return_tensors="pt"
-        )
-        input_ids = tokenized_description.input_ids.to(self.device)
-        attention_mask = tokenized_description.attention_mask.to(self.device)
+            description, return_tensors="pt"
+        ).to(self.device)
+        input_ids = tokenized_description.input_ids
+        attention_mask = tokenized_description.attention_mask
 
         tokenized_prompt = self.prompt_tokenizer(
             prompt, return_tensors="pt", **pad_args_prompt
-        )
-        prompt_input_ids = tokenized_prompt.input_ids.to(self.device)
-        prompt_attention_mask = tokenized_prompt.attention_mask.to(self.device)
+        ).to(self.device)
+        prompt_input_ids = tokenized_prompt.input_ids
+        prompt_attention_mask = tokenized_prompt.attention_mask
 
         gen_kwargs = {
             "input_ids": input_ids,
@@ -148,7 +171,8 @@ class ParlerTTSHandler(BaseHandler):
 
     def process(self, llm_sentence):
         if isinstance(llm_sentence, tuple):
-            llm_sentence, _ = llm_sentence
+            llm_sentence, language_code = llm_sentence
+            self.speaker = WHISPER_LANGUAGE_TO_PARLER_SPEAKER.get(language_code, "Jason")
             
         console.print(f"[green]ASSISTANT: {llm_sentence}")
         nb_tokens = len(self.prompt_tokenizer(llm_sentence).input_ids)
